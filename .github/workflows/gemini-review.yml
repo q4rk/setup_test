@@ -28,6 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: refs/pull/${{ github.event.pull_request.number || github.event.issue.number }}/head
           fetch-depth: 0
 
       - name: Load Gemini Configurations for PR Review
@@ -65,8 +66,6 @@ jobs:
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          use_gemini_code_assist: true
-          use_vertex_ai: true
           workflow_name: 'gemini-review'
           gemini_cli_version: 'latest'
           gemini_model: 'gemini-2.5-flash'
