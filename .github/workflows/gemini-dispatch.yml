@@ -78,11 +78,54 @@ jobs:
     needs: 'dispatch'
     if: |-
       ${{ needs.dispatch.outputs.command == 'review' }}
-    uses: './.github/workflows/gemini-review.yml'
+    uses: './.github/workflows/gemini-run.yml'
     permissions:
       contents: 'read'
       id-token: 'write'
       pull-requests: 'write'
     with:
+      prompt: |
+        /pr-code-review
+
+        CRITICAL INSTRUCTIONS:
+        1. The `code-review-commons` skill is ALREADY active. Do NOT call `activate_skill` or any skill activation tools, as they do not exist in your environment.
+        2. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use the literal values provided in the environment variables directly.
+      extensions: |
+        [
+          "https://github.com/gemini-cli-extensions/code-review"
+        ]
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
+      settings: |-
+        {
+          "model": {
+            "maxSessionTurns": 25
+          },
+          "telemetry": {
+            "enabled": false
+          },
+          "mcpServers": {
+            "github": {
+              "command": "docker",
+              "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "ghcr.io/github/github-mcp-server:v0.27.0"
+              ],
+              "includeTools": [
+                "add_comment_to_pending_review",
+                "pull_request_read",
+                "pull_request_review_write"
+              ],
+              "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+              }
+            }
+          },
+          "tools": {
+            "core": []
+          }
+        }
     secrets: 'inherit'

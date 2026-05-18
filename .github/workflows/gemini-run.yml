@@ -1,0 +1,112 @@
+name: '🤖 Gemini Run'
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        type: 'string'
+        required: true
+        description: 'The prompt or command to execute'
+      extensions:
+        type: 'string'
+        required: false
+        description: 'JSON array of extensions to install'
+        default: '[]'
+      additional_context:
+        type: 'string'
+        required: false
+        description: 'Any additional context'
+      gemini_model:
+        type: 'string'
+        required: false
+        default: 'gemini-2.5-flash'
+      settings:
+        type: 'string'
+        required: false
+        description: 'JSON string written to ~/.gemini/settings.json'
+        default: '{}'
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  run:
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 10
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      pull-requests: 'write'
+      issues: 'write'
+    env:
+      GEMINI_CLI_TRUST_WORKSPACE: 'true'
+      GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN || github.token }}'
+      GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+      REPOSITORY: '${{ github.repository }}'
+      PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+      ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+        with:
+          persist-credentials: 'false'
+          fetch-depth: 0
+
+      - name: 'Cache Gemini CLI and extensions'
+        id: 'gemini-cache'
+        uses: 'actions/cache@v4'
+        with:
+          path: |
+            ~/.gemini
+            ~/.npm
+          key: ${{ runner.os }}-gemini-cli-${{ hashFiles('.github/workflows/gemini-run.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-gemini-cli-
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v4'
+        with:
+          node-version: '20'
+
+      - name: 'Install Gemini CLI and Extensions'
+        shell: 'bash'
+        run: |
+          # Install gemini-cli globally if not already installed
+          if ! command -v gemini &> /dev/null; then
+            echo "Installing Gemini CLI..."
+            npm install -g @google/gemini-cli@latest
+          else
+            echo "Gemini CLI already installed (restored from cache)."
+          fi
+          
+          # Install extensions from the JSON list
+          echo '${{ inputs.extensions }}' | jq -r '.[]' | while IFS= read -r ext; do
+            ext=$(echo "${ext}" | xargs)
+            if [[ -n "${ext}" ]]; then
+              echo "Installing extension ${ext}..."
+              yes | gemini extensions install "${ext}" || true
+            fi
+          done
+
+      - name: 'Prepare prompt context'
+        shell: 'bash'
+        run: |-
+          mkdir -p .gemini
+          jq -n \
+            --arg repo "${REPOSITORY}" \
+            --arg pr "${PULL_REQUEST_NUMBER}" \
+            --arg context "${ADDITIONAL_CONTEXT}" \
+            '{repository: $repo, pull_request_number: $pr, additional_context: $context}' > .gemini/context.json
+
+      - name: 'Run Gemini CLI'
+        shell: 'bash'
+        env:
+          PROMPT: '${{ inputs.prompt }}'
+        run: |
+          # Configure settings.json dynamically from inputs
+          mkdir -p ~/.gemini
+          echo '${{ inputs.settings }}' > ~/.gemini/settings.json
+          
+          # Execute gemini CLI with debug enabled to stream logs
+          gemini --debug --yolo --prompt "${PROMPT}" --output-format json
