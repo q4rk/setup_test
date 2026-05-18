@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   dispatch:
@@ -41,7 +42,7 @@ jobs:
               core.setOutput('command', 'review');
             } else if (request.startsWith("@gemini-cli /review")) {
               core.setOutput('command', 'review');
-              const additionalContext = request.replace(/^@gemini-cli \/review/, '').trim();
+              const additionalContext = request.replace(/^@gemini-cli /review/, '').trim();
               core.setOutput('additional_context', additionalContext);
             } else {
               core.setOutput('command', 'fallthrough');
@@ -67,4 +68,11 @@ jobs:
     uses: './.github/workflows/gemini-review.yml'
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
+      gcp_workload_identity_provider: '${{ vars.GCP_WIF_PROVIDER }}'
+      gcp_service_account: '${{ vars.SERVICE_ACCOUNT_EMAIL }}'
+      gcp_project_id: '${{ vars.GOOGLE_CLOUD_PROJECT }}'
+      gcp_location: '${{ vars.GOOGLE_CLOUD_LOCATION }}'
+      use_vertex_ai: ${{ vars.GOOGLE_GENAI_USE_VERTEXAI == 'true' }}
+      use_gemini_code_assist: ${{ vars.GOOGLE_GENAI_USE_GCA == 'true' }}
+      app_id: '${{ vars.APP_ID }}'
     secrets: 'inherit'
