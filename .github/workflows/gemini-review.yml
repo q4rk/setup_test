@@ -51,9 +51,18 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: ${{ inputs.app_id }}
+        uses: 'actions/create-github-app-token@v2'
+        with:
+          app-id: '${{ inputs.app_id }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.mint_identity_token.outputs.token || github.token }}
           persist-credentials: false
           ref: refs/pull/${{ github.event.pull_request.number || github.event.issue.number }}/head
           fetch-depth: 0
@@ -78,7 +87,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.22
         env:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token || github.token }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
