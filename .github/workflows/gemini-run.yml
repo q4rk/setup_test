@@ -25,6 +25,10 @@ on:
         required: false
         description: 'JSON string written to ~/.gemini/settings.json'
         default: '{}'
+      gemini_debug:
+        type: 'string'
+        required: false
+        default: 'false'
 
 defaults:
   run:
@@ -59,3 +63,4 @@ jobs:
           settings: '${{ inputs.settings }}'
           extensions: '${{ inputs.extensions }}'
           workflow_name: '${{ github.workflow }}'
+          gemini_debug: '${{ inputs.gemini_debug }}'

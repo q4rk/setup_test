@@ -86,6 +86,8 @@ jobs:
       ${{ needs.dispatch.outputs.command == 'review' }}
     uses: './.github/workflows/gemini-run.yml'
     with:
+      gemini_model: 'gemini-3-flash-preview'
+      gemini_debug: 'true'
       prompt: |
         /pr-code-review
 
