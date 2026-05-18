@@ -105,8 +105,5 @@ jobs:
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ secrets.GITHUB_TOKEN || github.token }}"
                   }
                 }
-              },
-              "tools": {
-                "core": []
               }
             }
