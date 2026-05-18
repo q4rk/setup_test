@@ -34,7 +34,20 @@ jobs:
       - name: Load Gemini Configurations for PR Review
         id: config
         working-directory: .gemini/ci/pr-review
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ADDITIONAL_CONTEXT: ${{ inputs.additional_context }}
         run: |
+          python3 -c '
+          import os
+          content = open("PROMPT.md").read()
+          content = content.replace("${REPOSITORY}", os.environ["REPOSITORY"])
+          content = content.replace("${PULL_REQUEST_NUMBER}", os.environ["PULL_REQUEST_NUMBER"])
+          content = content.replace("${ADDITIONAL_CONTEXT}", os.environ.get("ADDITIONAL_CONTEXT", ""))
+          open("PROMPT_RESOLVED.md", "w").write(content)
+          '
+
           {
             echo "settings<<EOF"
             cat settings.json
@@ -42,9 +55,7 @@ jobs:
             echo "EOF"
 
             echo "prompt<<EOF"
-            echo "/pr-code-review"
-            echo ""
-            cat PROMPT.md
+            cat PROMPT_RESOLVED.md
             echo ""
             echo "EOF"
 
