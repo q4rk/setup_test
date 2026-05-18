@@ -44,7 +44,10 @@ jobs:
           content = open("../../commands/pr-code-review.toml.template").read()
           content = content.replace("${REPOSITORY}", os.environ["REPOSITORY"])
           content = content.replace("${PULL_REQUEST_NUMBER}", os.environ["PULL_REQUEST_NUMBER"])
-          content = content.replace("${ADDITIONAL_CONTEXT}", os.environ.get("ADDITIONAL_CONTEXT", ""))
+          add_ctx = os.environ.get("ADDITIONAL_CONTEXT", "").strip()
+          if not add_ctx:
+              add_ctx = "None"
+          content = content.replace("${ADDITIONAL_CONTEXT}", add_ctx)
           open("../../commands/pr-code-review.toml", "w").write(content)
           '
 
