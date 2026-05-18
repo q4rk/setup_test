@@ -25,16 +25,19 @@ jobs:
           {
             echo "settings<<EOF"
             cat settings.json
+            echo ""
             echo "EOF"
-            
+
             echo "prompt<<EOF"
             echo "/pr-code-review"
             echo ""
             cat PROMPT.md
+            echo ""
             echo "EOF"
-            
+
             echo "extensions<<EOF"
             cat extensions.json
+            echo ""
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
       
