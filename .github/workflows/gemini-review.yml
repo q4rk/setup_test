@@ -31,6 +31,37 @@ jobs:
           persist-credentials: 'false'
           fetch-depth: 0
 
+      - name: 'Cache Gemini CLI and extensions'
+        id: 'gemini-cache'
+        uses: 'actions/cache@v4'
+        with:
+          path: |
+            ~/.gemini
+            ~/.npm
+          key: ${{ runner.os }}-gemini-cli-${{ hashFiles('.github/workflows/gemini-review.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-gemini-cli-
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v4'
+        with:
+          node-version: '20'
+
+      - name: 'Install Gemini CLI and Extensions'
+        shell: 'bash'
+        run: |
+          # Install gemini-cli globally if not already installed
+          if ! command -v gemini &> /dev/null; then
+            echo "Installing Gemini CLI..."
+            npm install -g @google/gemini-cli@latest
+          else
+            echo "Gemini CLI already installed (restored from cache)."
+          fi
+          
+          # Install extension, ignore/continue if already installed
+          echo "Installing extension..."
+          echo "Y" | gemini extensions install "https://github.com/gemini-cli-extensions/code-review" || true
+
       - name: 'Prepare prompt context'
         shell: 'bash'
         run: |-
@@ -45,61 +76,59 @@ jobs:
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
 
-      - name: 'Run Gemini pull request review'
-        uses: 'google-github-actions/run-gemini-cli@v0.1.22'
-        id: 'gemini_pr_review'
+      - name: 'Run Gemini Pull Request Review'
+        shell: 'bash'
         env:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN || github.token }}'
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
-        with:
-          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
-          gemini_model: 'gemini-2.5-flash'
-          gemini_debug: 'true'
-          workflow_name: 'gemini-review'
-          github_pr_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
-          settings: |-
-            {
-              "model": {
-                "maxSessionTurns": 25
-              },
-              "telemetry": {
-                "enabled": false
-              },
-              "mcpServers": {
-                "github": {
-                  "command": "docker",
-                  "args": [
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-e",
-                    "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server:v0.27.0"
-                  ],
-                  "includeTools": [
-                    "add_comment_to_pending_review",
-                    "pull_request_read",
-                    "pull_request_review_write"
-                  ],
-                  "env": {
-                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-                  }
-                }
-              },
-              "tools": {
-                "core": []
-              }
-            }
-          extensions: |
-            [
-              "https://github.com/gemini-cli-extensions/code-review"
-            ]
-          prompt: |
+          PROMPT: |
             /pr-code-review
 
-            For this Pull Request review, the target repository is "${{ github.repository }}" and the Pull Request number is ${{ github.event.pull_request.number || github.event.issue.number }}.
-            When calling any GitHub MCP tools (such as pull_request_read.get, pull_request_read.get_diff, create_pending_pull_request_review, add_comment_to_pending_review, or submit_pending_pull_request_review), you MUST pass these exact literal values:
-            - repository: "${{ github.repository }}"
-            - pull_request_number: ${{ github.event.pull_request.number || github.event.issue.number }}
-            Do not use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
+            CRITICAL INSTRUCTIONS:
+            1. The `code-review-commons` skill is ALREADY active. Do NOT call `activate_skill` or any skill activation tools, as they do not exist in your environment.
+            2. For this Pull Request review, the target repository is "${{ github.repository }}" and the Pull Request number is ${{ github.event.pull_request.number || github.event.issue.number }}.
+            3. When calling any GitHub MCP tools (such as pull_request_read.get, pull_request_read.get_diff, create_pending_pull_request_review, add_comment_to_pending_review, or submit_pending_pull_request_review), you MUST pass these exact literal values:
+               - repository: "${{ github.repository }}"
+               - pull_request_number: ${{ github.event.pull_request.number || github.event.issue.number }}
+            4. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
+        run: |
+          # Configure settings.json
+          mkdir -p ~/.gemini
+          cat << EOF > ~/.gemini/settings.json
+          {
+            "model": {
+              "maxSessionTurns": 25
+            },
+            "telemetry": {
+              "enabled": false
+            },
+            "mcpServers": {
+              "github": {
+                "command": "docker",
+                "args": [
+                  "run",
+                  "-i",
+                  "--rm",
+                  "-e",
+                  "GITHUB_PERSONAL_ACCESS_TOKEN",
+                  "ghcr.io/github/github-mcp-server:v0.27.0"
+                ],
+                "includeTools": [
+                  "add_comment_to_pending_review",
+                  "pull_request_read",
+                  "pull_request_review_write"
+                ],
+                "env": {
+                  "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                }
+              }
+            },
+            "tools": {
+              "core": []
+            }
+          }
+          EOF
+          
+          # Execute gemini CLI with debug enabled to stream logs
+          gemini --debug --yolo --prompt "${PROMPT}" --output-format json
