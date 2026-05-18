@@ -48,6 +48,10 @@ jobs:
           open("PROMPT_RESOLVED.md", "w").write(content)
           '
 
+          echo "=== DEBUG: PROMPT_RESOLVED.md ==="
+          cat PROMPT_RESOLVED.md
+          echo "=================================="
+
           {
             echo "settings<<EOF"
             cat settings.json
