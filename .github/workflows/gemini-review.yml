@@ -39,11 +39,8 @@ jobs:
       - name: 'Prepare Cache'
         shell: 'bash'
         run: |
-          # If gemini is restored and extension exists, uninstall it first so the Action's installer never crashes
-          if command -v gemini &> /dev/null; then
-            echo "Gemini CLI found. Preparing extension cache..."
-            gemini extensions uninstall "code-review" || true
-          fi
+          echo "Clearing cached extension directory to prevent duplicate installer crash..."
+          rm -rf ~/.gemini/extensions/code-review
 
       - name: 'Run Gemini CLI'
         uses: 'google-github-actions/run-gemini-cli@v0.1.22'
