@@ -1,4 +1,4 @@
-name: '🔎 Gemini Code Review'
+name: 'Run Gemini'
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
           persist-credentials: 'false'
           fetch-depth: 0
 
-      - name: 'Run Gemini CLI'
+      - name: 'Gemini Cli Code Review'
         uses: 'google-github-actions/run-gemini-cli@v0.1.22'
         env:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
