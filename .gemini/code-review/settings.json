@@ -1,6 +1,6 @@
 {
   "model": {
-    "maxSessionTurns": 10
+    "maxSessionTurns": 25
   },
   "telemetry": {
     "enabled": false
