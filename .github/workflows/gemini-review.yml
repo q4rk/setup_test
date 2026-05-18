@@ -92,7 +92,6 @@ jobs:
           
           # Execution inputs
           gemini_model: 'gemini-2.5-flash'
-          gemini_debug: 'true'
           prompt: '/gemini-review'
           settings: ${{ steps.config.outputs.settings }}
           extensions: ${{ steps.config.outputs.extensions }}
