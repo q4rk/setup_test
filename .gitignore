@@ -1,0 +1,3 @@
+# Gemini CLI cache & credentials
+.gemini/
+gha-creds-*.json
