@@ -31,15 +31,6 @@ jobs:
           persist-credentials: 'false'
           fetch-depth: 0
 
-      - name: 'Cache Gemini CLI extensions'
-        uses: 'actions/cache@v4'
-        with:
-          path: |
-            ~/.gemini
-          key: ${{ runner.os }}-gemini-cli-${{ hashFiles('.github/workflows/gemini-review.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-gemini-cli-
-
       - name: 'Prepare prompt context'
         shell: 'bash'
         run: |-
