@@ -63,7 +63,7 @@ jobs:
             echo "EOF_DELIM"
             
             echo "prompt<<EOF_DELIM"
-            envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < prompt.md
+            envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < PROMPT.md
             echo "EOF_DELIM"
           } >> "$GITHUB_OUTPUT"
 
