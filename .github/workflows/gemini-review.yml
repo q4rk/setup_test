@@ -11,8 +11,6 @@ permissions:
 jobs:
   review:
     runs-on: 'ubuntu-latest'
-    env:
-      GEMINI_CLI_TRUST_WORKSPACE: 'true'
     steps:
       - name: 'Checkout repository'
         uses: 'actions/checkout@v4'
@@ -20,35 +18,8 @@ jobs:
           persist-credentials: 'false'
           fetch-depth: 0
 
-      - name: 'Cache Gemini CLI and extensions'
-        id: 'gemini-cache'
-        uses: 'actions/cache@v4'
-        with:
-          path: |
-            ~/.gemini
-            ~/.npm
-          key: ${{ runner.os }}-gemini-cli-${{ hashFiles('.github/workflows/gemini-review.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-gemini-cli-
-
-      - name: 'Install Node.js'
-        uses: 'actions/setup-node@v4'
-        with:
-          node-version: '20'
-
-      - name: 'Prepare Cache'
-        shell: 'bash'
-        run: |
-          echo "Clearing cached extension directory to prevent duplicate installer crash..."
-          rm -rf ~/.gemini/extensions/code-review
-
       - name: 'Run Gemini CLI'
         uses: 'google-github-actions/run-gemini-cli@v0.1.22'
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN || github.token }}'
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
-          REPOSITORY: '${{ github.repository }}'
-          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
         with:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gemini_model: 'gemini-2.5-flash'
