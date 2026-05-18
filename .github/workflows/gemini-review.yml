@@ -26,9 +26,15 @@ jobs:
           cat .gemini/code-review/settings.json >> "${GITHUB_OUTPUT}"
           echo "EOF" >> "${GITHUB_OUTPUT}"
 
-      - name: 'Load Code Review Instructions'
+      - name: 'Load Code Review Prompt'
+        id: 'load_prompt'
         shell: 'bash'
-        run: cp .gemini/code-review/GEMINI.md GEMINI.md
+        run: |
+          echo "prompt<<EOF" >> "${GITHUB_OUTPUT}"
+          echo "/pr-code-review" >> "${GITHUB_OUTPUT}"
+          echo "" >> "${GITHUB_OUTPUT}"
+          cat .gemini/code-review/PROMPT.md >> "${GITHUB_OUTPUT}"
+          echo "EOF" >> "${GITHUB_OUTPUT}"
 
       - name: 'Run Gemini CLI'
         uses: 'google-github-actions/run-gemini-cli@v0.1.22'
@@ -41,7 +47,7 @@ jobs:
         with:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gemini_model: 'gemini-2.5-flash'
-          prompt: '/pr-code-review'
+          prompt: '${{ steps.load_prompt.outputs.prompt }}'
           settings: '${{ steps.load_settings.outputs.settings }}'
           extensions: |
             [
