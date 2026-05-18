@@ -40,6 +40,7 @@ jobs:
                - repository: "${{ github.repository }}"
                - pull_request_number: ${{ github.event.pull_request.number }}
             4. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
+            5. ANTI-SPAM GUARDRAIL: First, fetch and read the Pull Request's existing review comments. If an issue at a specific file and line has already been pointed out in a previous review comment, DO NOT post a duplicate comment. Only comment on newly introduced changes or unaddressed issues.
           extensions: |
             [
               "https://github.com/gemini-cli-extensions/code-review"
