@@ -99,9 +99,20 @@ jobs:
             🤖 Hi @${{ github.actor }}, I've received your request, and I'm working on it now! You can track my progress [in the logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
           REPOSITORY: "${{ github.repository }}"
         run: |-
-          gh issue comment "${ISSUE_NUMBER}" \
-            --body "${MESSAGE}" \
-            --repo "${REPOSITORY}"
+          # Search for existing acknowledgement comment posted by GHA bot
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number || github.event.issue.number }}/comments" \
+            --jq '.[] | select((.user.login | endswith("[bot]")) and (.body | startswith("🤖 Hi @"))) | .id' | head -n 1)
+          
+          if [ -n "$COMMENT_ID" ]; then
+            echo "Found existing acknowledgement comment (ID: $COMMENT_ID). Updating it..."
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              -f body="${MESSAGE}"
+          else
+            echo "No existing acknowledgement comment found. Creating a new one..."
+            gh issue comment "${ISSUE_NUMBER}" \
+              --body "${MESSAGE}" \
+              --repo "${REPOSITORY}"
+          fi
 
   review:
     needs: "dispatch"
