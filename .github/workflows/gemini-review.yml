@@ -1,10 +1,12 @@
-name: 'Run Gemini'
+name: 'Gemini Review Reusable'
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-  issue_comment:
-    types: [created]
+  workflow_call:
+    inputs:
+      additional_context:
+        type: 'string'
+        required: false
+        description: 'Any additional context'
 
 permissions:
   contents: read
@@ -12,13 +14,6 @@ permissions:
 
 jobs:
   review:
-    if: |-
-      (github.event_name == 'pull_request') ||
-      (
-        github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request != null &&
-        startsWith(github.event.comment.body, '@gemini-cli /review')
-      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
