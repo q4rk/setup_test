@@ -57,6 +57,7 @@ jobs:
       - name: Run Gemini CLI for PR Review
         uses: google-github-actions/run-gemini-cli@v0.1.22
         env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: ${{ github.token }}
           ISSUE_TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
           ISSUE_BODY: '${{ github.event.pull_request.body || github.event.issue.body }}'
