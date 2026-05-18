@@ -1,93 +1,89 @@
-name: 'Gemini Review'
+name: 'Gemini PR Review'
 
 on:
-  workflow_call:
-    inputs:
-      additional_context:
-        type: 'string'
-        description: 'Any additional context from the request'
-        required: false
-        
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
 concurrency:
-  group: '${{ github.workflow }}-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
+  group: '${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}'
   cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
-
-defaults:
-  run:
-    shell: 'bash'
+  issues: write
 
 jobs:
   review:
+    # Only run on PRs (not forks) OR on PR comments starting with the command from authorized users
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '@gemini-cli /review') && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-          ref: refs/pull/${{ github.event.pull_request.number || github.event.issue.number }}/head
           fetch-depth: 0
 
-      - name: Load Gemini Configurations for PR Review
+      - name: Acknowledge Command (Reaction)
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST /repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions -f content='eyes'
+
+      - name: Extract Context & Load Configs
         id: config
         working-directory: .gemini/ci/pr-review
         env:
           REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
-          ADDITIONAL_CONTEXT: ${{ inputs.additional_context }}
+          RAW_COMMENT: ${{ github.event.comment.body || '' }}
         run: |
-          python3 -c '
-          import os
-          content = open("PROMPT.md").read()
-          content = content.replace("${REPOSITORY}", os.environ["REPOSITORY"])
-          content = content.replace("${PULL_REQUEST_NUMBER}", os.environ["PULL_REQUEST_NUMBER"])
-          content = content.replace("${ADDITIONAL_CONTEXT}", os.environ.get("ADDITIONAL_CONTEXT", ""))
-          open("PROMPT_RESOLVED.md", "w").write(content)
-          '
-
-          echo "=== DEBUG: PROMPT_RESOLVED.md ==="
-          cat PROMPT_RESOLVED.md
-          echo "=================================="
-
+          # 1. Extract additional context from the comment (if any)
+          ADDITIONAL_CONTEXT="None"
+          if [[ "$RAW_COMMENT" == *"@gemini-cli /review"* ]]; then
+            ADDITIONAL_CONTEXT=$(echo "$RAW_COMMENT" | sed 's/^@gemini-cli \/review//' | xargs)
+            [ -z "$ADDITIONAL_CONTEXT" ] && ADDITIONAL_CONTEXT="None"
+          fi
+          
+          # Export variables so envsubst can access them
+          export REPOSITORY PULL_REQUEST_NUMBER ADDITIONAL_CONTEXT
+          
+          # 2. Safely read files and set GitHub Outputs
           {
-            echo "settings<<EOF"
+            echo "settings<<EOF_DELIM"
             cat settings.json
             echo ""
-            echo "EOF"
-
-            echo "prompt<<EOF"
-            cat PROMPT_RESOLVED.md
-            echo ""
-            echo "EOF"
-
-            echo "extensions<<EOF"
+            echo "EOF_DELIM"
+            
+            echo "extensions<<EOF_DELIM"
             cat extensions.json
             echo ""
-            echo "EOF"
+            echo "EOF_DELIM"
+            
+            echo "prompt<<EOF_DELIM"
+            envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < PROMPT.md
+            echo ""
+            echo "EOF_DELIM"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Run Gemini CLI for PR Review
+      - name: Run Gemini CLI
         uses: google-github-actions/run-gemini-cli@v0.1.22
         env:
-          GEMINI_CLI_TRUST_WORKSPACE: true
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: ${{ github.token }}
-          ISSUE_TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
-          ISSUE_BODY: '${{ github.event.pull_request.body || github.event.issue.body }}'
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
-          ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          workflow_name: 'gemini-review'
-          gemini_cli_version: 'latest'
           gemini_model: 'gemini-2.5-flash'
-          # Explicitly set the PR number to handle `issue_comment` triggers (which GitHub treats as issues, not PRs)
-          github_pr_number: '${{ github.event.pull_request.number }}'
+          github_pr_number: ${{ github.event.pull_request.number || github.event.issue.number }}
           prompt: ${{ steps.config.outputs.prompt }}
           settings: ${{ steps.config.outputs.settings }}
           extensions: ${{ steps.config.outputs.extensions }}
-          gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || true) }}'
