@@ -18,6 +18,18 @@ jobs:
           persist-credentials: 'false'
           fetch-depth: 0
 
+      - name: 'Load Code Review Settings'
+        id: 'load_settings'
+        shell: 'bash'
+        run: |
+          echo "settings<<EOF" >> "${GITHUB_OUTPUT}"
+          cat .gemini/code-review/settings.json >> "${GITHUB_OUTPUT}"
+          echo "EOF" >> "${GITHUB_OUTPUT}"
+
+      - name: 'Load Code Review Instructions'
+        shell: 'bash'
+        run: cp .gemini/code-review/GEMINI.md GEMINI.md
+
       - name: 'Run Gemini CLI'
         uses: 'google-github-actions/run-gemini-cli@v0.1.22'
         env:
@@ -30,6 +42,7 @@ jobs:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gemini_model: 'gemini-2.5-flash'
           prompt: '/pr-code-review'
+          settings: '${{ steps.load_settings.outputs.settings }}'
           extensions: |
             [
               "https://github.com/gemini-cli-extensions/code-review"
