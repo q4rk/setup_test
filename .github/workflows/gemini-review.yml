@@ -65,8 +65,6 @@ jobs:
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          use_gemini_code_assist: ${{ vars.GOOGLE_GENAI_USE_GCA == 'true' }}
-          use_vertex_ai: ${{ vars.GOOGLE_GENAI_USE_VERTEXAI == 'true' }}
           workflow_name: 'gemini-review'
           gemini_cli_version: 'latest'
           gemini_model: 'gemini-2.5-flash'
