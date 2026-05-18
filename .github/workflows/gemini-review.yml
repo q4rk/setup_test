@@ -95,4 +95,11 @@ jobs:
             [
               "https://github.com/gemini-cli-extensions/code-review"
             ]
-          prompt: '/pr-code-review'
+          prompt: |
+            /pr-code-review
+
+            For this Pull Request review, the target repository is "${{ github.repository }}" and the Pull Request number is ${{ github.event.pull_request.number || github.event.issue.number }}.
+            When calling any GitHub MCP tools (such as pull_request_read.get, pull_request_read.get_diff, create_pending_pull_request_review, add_comment_to_pending_review, or submit_pending_pull_request_review), you MUST pass these exact literal values:
+            - repository: "${{ github.repository }}"
+            - pull_request_number: ${{ github.event.pull_request.number || github.event.issue.number }}
+            Do not use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
