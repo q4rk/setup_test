@@ -41,11 +41,15 @@ jobs:
             echo ""
             echo "EOF"
 
+            OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+            REPO=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+
             echo "prompt<<EOF"
             echo "/pr-code-review"
             echo ""
             echo "CRITICAL RUNTIME PARAMETERS:"
-            echo "- GitHub Repository: ${{ github.repository }}"
+            echo "- GitHub Repository Owner: \$OWNER"
+            echo "- GitHub Repository Name: \$REPO"
             echo "- Pull Request Number: ${{ github.event.pull_request.number || github.event.issue.number }}"
             echo ""
             cat PROMPT.md

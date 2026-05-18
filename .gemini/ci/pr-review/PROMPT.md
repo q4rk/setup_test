@@ -15,20 +15,43 @@ To ensure high-quality, clean, and non-spammy feedback, you MUST strictly adhere
 - The `code-review-commons` skill is ALREADY active. Proceed directly to analyzing using the `github` MCP tools.
 
 ## 3. MCP Tool Calling Guidelines (CRITICAL SCHEMA)
-You MUST call the registered `github` MCP tools using these exact schemas:
-1. **To read Pull Request diff & data**:
-   - Tool: `mcp_github_pull_request_read`
+You MUST call the registered `github` MCP tools using these exact official schemas:
+1. **To get the Pull Request diff**:
+   - Tool: `mcp_github_pull_requests_get_diff`
    - Arguments:
-     - `repository`: literal repository name (e.g. "q4rk/setup_test")
-     - `pull_request_number`: literal PR number (e.g. 9)
-     - `action`: `"get"` (to get PR metadata), `"get_diff"` (to get the code diffs), `"get_files"` (to get the files list), or `"get_review_comments"` (to get comment history).
-2. **To write/submit reviews**:
-   - Tool: `mcp_github_pull_request_review_write`
+     - `owner`: The repository owner literal string (e.g. "q4rk")
+     - `repo`: The repository name literal string (e.g. "setup_test")
+     - `pull_number`: The PR number literal integer (e.g. 10)
+
+2. **To fetch PR metadata**:
+   - Tool: `mcp_github_pull_requests_get`
+   - Arguments: `owner`, `repo`, `pull_number`
+
+3. **To get PR comment history for Anti-Spam check**:
+   - Tool: `mcp_github_pull_requests_list_review_comments`
+   - Arguments: `owner`, `repo`, `pull_number`
+
+4. **To create and submit code reviews**:
+   - Tool: `mcp_github_pull_requests_create_review`
    - Arguments:
-     - `repository`
-     - `pull_request_number`
-     - `action`: `"create_pending"` (to start a review), `"add_comment_to_pending"` (to add an inline comment), or `"submit_pending"` (to submit the final review).
+     - `owner`
+     - `repo`
+     - `pull_number`
+     - `event`: "COMMENT"
+     - `body`: A brief assessment summary string (2-3 sentences) matching the exact markdown summary template format.
+     - `comments`: An array of inline comments, each object containing:
+       - `path`: Relative file path string (e.g. "unsafe_file_reader.py")
+       - `line`: Exact line number integer (e.g. 12)
+       - `side`: "RIGHT" (or "LEFT" if commenting on original code)
+       - `body`: Structured inline feedback matching the severity templates:
+         ```
+         {{SEVERITY}} {{COMMENT_TEXT}}
+
+         ```suggestion
+         {{CODE_SUGGESTION}}
+         ```
+         ```
 
 ## 4. Anti-Spam Guardrail
-- **CRITICAL:** First, fetch and read the Pull Request's existing review comments by calling `mcp_github_pull_request_read` with `action: "get_review_comments"`.
-- If an issue at a specific file and line has already been pointed out in a previous review comment, **do NOT post a duplicate comment**.
+- **CRITICAL:** First, fetch and read the Pull Request's existing comments using `mcp_github_pull_requests_list_review_comments`.
+- If an issue at a specific file and line has already been pointed out in a previous comment, **do NOT post a duplicate comment**.
