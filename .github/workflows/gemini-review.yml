@@ -1,0 +1,73 @@
+name: '🔎 Gemini Code Review'
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: 'read'
+  pull-requests: 'write'
+
+jobs:
+  review:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+        with:
+          persist-credentials: 'false'
+          fetch-depth: 0
+
+      - name: 'Run Gemini CLI'
+        uses: 'google-github-actions/run-gemini-cli@v0.1.22'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gemini_model: 'gemini-3-flash-preview'
+          gemini_debug: 'true'
+          prompt: |
+            /pr-code-review
+
+            CRITICAL INSTRUCTIONS:
+            1. The `code-review-commons` skill is ALREADY active. Do NOT call `activate_skill` or any skill activation tools, as they do not exist in your environment.
+            2. For this Pull Request review, the target repository is "${{ github.repository }}" and the Pull Request number is ${{ github.event.pull_request.number }}.
+            3. When calling any GitHub MCP tools (such as pull_request_read.get, pull_request_read.get_diff, create_pending_pull_request_review, add_comment_to_pending_review, or submit_pending_pull_request_review), you MUST pass these exact literal values:
+               - repository: "${{ github.repository }}"
+               - pull_request_number: ${{ github.event.pull_request.number }}
+            4. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
+          extensions: |
+            [
+              "https://github.com/gemini-cli-extensions/code-review"
+            ]
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 25
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                  ],
+                  "includeTools": [
+                    "add_comment_to_pending_review",
+                    "pull_request_read",
+                    "pull_request_review_write"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ secrets.GITHUB_TOKEN || github.token }}"
+                  }
+                }
+              },
+              "tools": {
+                "core": []
+              }
+            }
