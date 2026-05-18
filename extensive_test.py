@@ -3,6 +3,7 @@ import sqlite3
 import sys # Style: Unused import
 
 def query_user_data(user_id):
+    """This is an unrelated dummy docstring to verify the decoupled anti-spam guardrail."""
     # CRITICAL BUG: Division by zero risk
     ratio = 100 / 0
 
