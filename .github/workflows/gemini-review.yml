@@ -41,15 +41,15 @@ jobs:
         run: |
           python3 -c '
           import os
-          content = open("PROMPT.md").read()
+          content = open("../../commands/pr-code-review.toml.template").read()
           content = content.replace("${REPOSITORY}", os.environ["REPOSITORY"])
           content = content.replace("${PULL_REQUEST_NUMBER}", os.environ["PULL_REQUEST_NUMBER"])
           content = content.replace("${ADDITIONAL_CONTEXT}", os.environ.get("ADDITIONAL_CONTEXT", ""))
-          open("PROMPT_RESOLVED.md", "w").write(content)
+          open("../../commands/pr-code-review.toml", "w").write(content)
           '
 
-          echo "=== DEBUG: PROMPT_RESOLVED.md ==="
-          cat PROMPT_RESOLVED.md
+          echo "=== DEBUG: pr-code-review.toml ==="
+          cat ../../commands/pr-code-review.toml
           echo "=================================="
 
           {
@@ -59,8 +59,7 @@ jobs:
             echo "EOF"
 
             echo "prompt<<EOF"
-            cat PROMPT_RESOLVED.md
-            echo ""
+            echo "/pr-code-review"
             echo "EOF"
 
             echo "extensions<<EOF"
