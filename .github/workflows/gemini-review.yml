@@ -82,16 +82,10 @@ jobs:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN || github.token }}'
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
-          PROMPT: |
-            /pr-code-review
-
-            CRITICAL INSTRUCTIONS:
-            1. The `code-review-commons` skill is ALREADY active. Do NOT call `activate_skill` or any skill activation tools, as they do not exist in your environment.
-            2. For this Pull Request review, the target repository is "${{ github.repository }}" and the Pull Request number is ${{ github.event.pull_request.number || github.event.issue.number }}.
-            3. When calling any GitHub MCP tools (such as pull_request_read.get, pull_request_read.get_diff, create_pending_pull_request_review, add_comment_to_pending_review, or submit_pending_pull_request_review), you MUST pass these exact literal values:
-               - repository: "${{ github.repository }}"
-               - pull_request_number: ${{ github.event.pull_request.number || github.event.issue.number }}
-            4. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
+          REPOSITORY: '${{ github.repository }}'
+          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          PROMPT: '/pr-code-review'
         run: |
           # Configure settings.json
           mkdir -p ~/.gemini
