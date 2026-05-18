@@ -44,6 +44,7 @@ jobs:
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
           RAW_COMMENT: ${{ github.event.comment.body || '' }}
         run: |
+          # 1. Extract additional context from the comment (if any)
           ADDITIONAL_CONTEXT="None"
           if [[ "$RAW_COMMENT" == *"@gemini-cli /review"* ]]; then
             ADDITIONAL_CONTEXT=$(echo "$RAW_COMMENT" | sed 's/^@gemini-cli \/review//' | xargs)
@@ -53,17 +54,21 @@ jobs:
           # Export variables so envsubst can access them
           export REPOSITORY PULL_REQUEST_NUMBER ADDITIONAL_CONTEXT
           
+          # 2. Safely read files and set GitHub Outputs
           {
             echo "settings<<EOF_DELIM"
             cat settings.json
+            echo ""
             echo "EOF_DELIM"
             
             echo "extensions<<EOF_DELIM"
             cat extensions.json
+            echo ""
             echo "EOF_DELIM"
             
             echo "prompt<<EOF_DELIM"
             envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < PROMPT.md
+            echo ""
             echo "EOF_DELIM"
           } >> "$GITHUB_OUTPUT"
 
