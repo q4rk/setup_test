@@ -1,55 +1,54 @@
-name: '🔎 Gemini Code Review'
+name: 'Run Gemini'
 
 on:
   pull_request:
     types: [opened, synchronize]
 
 permissions:
-  contents: 'read'
-  pull-requests: 'write'
+  contents: read
+  pull-requests: write
 
 jobs:
   review:
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout repository'
-        uses: 'actions/checkout@v4'
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          persist-credentials: 'false'
+          persist-credentials: false
           fetch-depth: 0
 
-      - name: 'Load Code Review Settings'
-        id: 'load_settings'
-        shell: 'bash'
+      - name: Load Gemini Configurations for PR Review
+        id: config
+        working-directory: .gemini/ci/pr-review
         run: |
-          echo "settings<<EOF" >> "${GITHUB_OUTPUT}"
-          cat .gemini/code-review/settings.json >> "${GITHUB_OUTPUT}"
-          echo "EOF" >> "${GITHUB_OUTPUT}"
-
-      - name: 'Load Code Review Prompt'
-        id: 'load_prompt'
-        shell: 'bash'
-        run: |
-          echo "prompt<<EOF" >> "${GITHUB_OUTPUT}"
-          echo "/pr-code-review" >> "${GITHUB_OUTPUT}"
-          echo "" >> "${GITHUB_OUTPUT}"
-          cat .gemini/code-review/PROMPT.md >> "${GITHUB_OUTPUT}"
-          echo "EOF" >> "${GITHUB_OUTPUT}"
-
-      - name: 'Run Gemini CLI'
-        uses: 'google-github-actions/run-gemini-cli@v0.1.22'
+          {
+            echo "settings<<EOF"
+            cat settings.json
+            echo "EOF"
+            
+            echo "prompt<<EOF"
+            echo "/pr-code-review"
+            echo ""
+            cat PROMPT.md
+            echo "EOF"
+            
+            echo "extensions<<EOF"
+            cat extensions.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      
+      - name: Run Gemini CLI for PR Review
+        uses: google-github-actions/run-gemini-cli@v0.1.22
         env:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN || github.token }}'
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
-          REPOSITORY: '${{ github.repository }}'
-          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
+          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         with:
-          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: 'gemini-2.5-flash'
-          prompt: '${{ steps.load_prompt.outputs.prompt }}'
-          settings: '${{ steps.load_settings.outputs.settings }}'
-          extensions: |
-            [
-              "https://github.com/gemini-cli-extensions/code-review"
-            ]
+          prompt: ${{ steps.config.outputs.prompt }}
+          settings: ${{ steps.config.outputs.settings }}
+          extensions: ${{ steps.config.outputs.extensions }}
