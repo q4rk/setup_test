@@ -1,7 +1,7 @@
-# .gemini/commands/pr-review.toml
+# .gemini/commands/gemini-review.toml
 
 [command]
-name = "pr-review"
+name = "gemini-review"
 description = "Automated PR Code Review with Anti-Spam Guardrails"
 
 [prompt]

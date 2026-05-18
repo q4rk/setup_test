@@ -93,7 +93,7 @@ jobs:
           # Execution inputs
           gemini_model: 'gemini-2.5-flash'
           gemini_debug: 'true'
-          prompt: '/pr-review'
+          prompt: '/gemini-review'
           settings: ${{ steps.config.outputs.settings }}
           extensions: ${{ steps.config.outputs.extensions }}
           github_pr_number: ${{ github.event.pull_request.number || github.event.issue.number }}
