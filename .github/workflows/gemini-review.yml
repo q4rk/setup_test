@@ -36,23 +36,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 'Install Gemini CLI and Extensions Natively'
+      - name: 'Prepare Cache'
         shell: 'bash'
         run: |
-          # Install gemini-cli globally if not already in PATH
-          if ! command -v gemini &> /dev/null; then
-            echo "Installing Gemini CLI..."
-            npm install -g @google/gemini-cli@latest
-          else
-            echo "Gemini CLI already installed (restored from cache)."
-          fi
-          
-          # Install code-review extension natively if not already cached
-          if [ ! -d ~/.gemini/extensions/code-review ]; then
-            echo "Installing code-review extension..."
-            yes | gemini extensions install "https://github.com/gemini-cli-extensions/code-review" || true
-          else
-            echo "Extension code-review already installed (restored from cache)."
+          # If gemini is restored and extension exists, uninstall it first so the Action's installer never crashes
+          if command -v gemini &> /dev/null; then
+            echo "Gemini CLI found. Preparing extension cache..."
+            gemini extensions uninstall "code-review" || true
           fi
 
       - name: 'Run Gemini CLI'
@@ -76,7 +66,10 @@ jobs:
                - repository: "${{ github.repository }}"
                - pull_request_number: ${{ github.event.pull_request.number }}
             4. Do NOT use placeholder variables or environment variables like $REPOSITORY or $PULL_REQUEST_NUMBER in your Python tool call arguments. Use these exact literal values directly.
-          # NOTE: extensions input is omitted here since we pre-installed it natively and cached it, preventing GHA Action duplicate installation crashes!
+          extensions: |
+            [
+              "https://github.com/gemini-cli-extensions/code-review"
+            ]
           settings: |-
             {
               "model": {
