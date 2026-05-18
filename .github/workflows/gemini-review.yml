@@ -43,6 +43,10 @@ permissions:
   pull-requests: write
   id-token: write
 
+defaults:
+  run:
+    shell: 'bash'
+
 jobs:
   review:
     runs-on: ubuntu-latest

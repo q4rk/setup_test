@@ -11,6 +11,14 @@ permissions:
   pull-requests: write
   id-token: write
 
+concurrency:
+  group: '${{ github.workflow }}-review-${{ github.event.pull_request.number || github.event.issue.number }}'
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash'
+
 jobs:
   dispatch:
     if: |-
