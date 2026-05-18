@@ -75,4 +75,4 @@ jobs:
           prompt: ${{ steps.config.outputs.prompt }}
           settings: ${{ steps.config.outputs.settings }}
           extensions: ${{ steps.config.outputs.extensions }}
-          gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
+          gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || true) }}'
