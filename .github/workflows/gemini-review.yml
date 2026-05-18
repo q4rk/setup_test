@@ -85,6 +85,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          APP_ID: ${{ inputs.app_id }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
         with:
           # Authentication inputs
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
@@ -94,8 +96,6 @@ jobs:
           gcp_location: ${{ inputs.gcp_location }}
           use_vertex_ai: ${{ inputs.use_vertex_ai }}
           use_gemini_code_assist: ${{ inputs.use_gemini_code_assist }}
-          app_id: ${{ inputs.app_id }}
-          app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
           
           # Execution inputs
           gemini_model: 'gemini-2.5-flash'
