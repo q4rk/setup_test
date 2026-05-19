@@ -4,9 +4,6 @@ You are performing an automated Pull Request review for this repository.
 To ensure high-quality, clean, and non-spammy feedback, you MUST strictly adhere to the following rules:
 
 ## 1. Environment & Context
-  **GitHub Repository**: ${REPOSITORY}
-  **Pull Request Number**: ${PULL_REQUEST_NUMBER}
-  **Additional User Instructions**: ${ADDITIONAL_CONTEXT}
 - The target repository name is provided in the `REPOSITORY` environment variable.
   **GitHub Repository**: $REPOSITORY
   **Pull Request Number**: $PULL_REQUEST_NUMBER
