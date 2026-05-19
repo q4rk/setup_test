@@ -1,12 +1,17 @@
+# This workflow performs automated code reviews on Pull Requests using Gemini AI.
+# It can be triggered automatically on PR events or manually via comments.
 name: 'Gemini PR Review'
 
 on:
+  # Trigger automatically when a PR is opened or updated (synchronized)
   pull_request:
     types: [opened, synchronize]
+  # Trigger when a comment is created on an issue/PR
   issue_comment:
     types: [created]
 
 concurrency:
+  # Ensure only one review run per PR/Issue at a time to avoid conflicts and spam
   group: '${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}'
   cancel-in-progress: true
 
@@ -17,7 +22,12 @@ permissions:
 
 jobs:
   review:
-    # Only run on PRs (not forks) OR on PR comments starting with the command from authorized users
+    # SECURITY GUARDRAILS:
+    # 1. For pull_request events: Only run if it is NOT a fork to prevent secrets exposure to untrusted code.
+    # 2. For issue_comment events:
+    #    - Must be on a Pull Request (github.event.issue.pull_request exists).
+    #    - Comment must start with '@gemini-cli /review'.
+    #    - User must be an authorized collaborator (OWNER, MEMBER, COLLABORATOR) to prevent unauthorized trigger.
     if: >-
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork) ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '@gemini-cli /review') && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
@@ -29,6 +39,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # Acknowledge comment triggers immediately with an 'eyes' reaction to give user feedback
       - name: Acknowledge Command (Reaction)
         if: github.event_name == 'issue_comment'
         env:
@@ -36,6 +47,7 @@ jobs:
         run: |
           gh api -X POST /repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions -f content='eyes'
 
+      # Prepare the context and resolve placeholders in the prompt template
       - name: Extract Context & Load Configs
         id: config
         working-directory: .gemini/ci/pr-review
@@ -44,13 +56,15 @@ jobs:
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
           RAW_COMMENT: ${{ github.event.comment.body || '' }}
         run: |
-          # Extract additional context from the comment (if any)
+          # Extract additional context from the comment (if any) after the command
+          # E.g. '@gemini-cli /review focus on security' -> ADDITIONAL_CONTEXT="focus on security"
           ADDITIONAL_CONTEXT="None"
           if [[ "$RAW_COMMENT" == *"@gemini-cli /review"* ]]; then
             ADDITIONAL_CONTEXT=$(echo "$RAW_COMMENT" | sed 's/^@gemini-cli \/review//' | xargs)
             [ -z "$ADDITIONAL_CONTEXT" ] && ADDITIONAL_CONTEXT="None"
           fi
           export REPOSITORY PULL_REQUEST_NUMBER ADDITIONAL_CONTEXT
+          
           {
             echo "settings<<EOF_DELIM"
             cat settings.json
@@ -62,6 +76,10 @@ jobs:
             echo ""
             echo "EOF_DELIM"
             
+            # CRITICAL FIX: Use envsubst to resolve placeholders ($REPOSITORY, $PULL_REQUEST_NUMBER, $ADDITIONAL_CONTEXT)
+            # in PROMPT.md before passing it. This prevents the model from getting literal placeholders
+            # and falling back to example values (which caused it to review wrong PRs in the past).
+            # We explicitly scope envsubst to only replace these three variables for safety.
             echo "prompt<<EOF_DELIM"
             envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < PROMPT.md
             echo ""
