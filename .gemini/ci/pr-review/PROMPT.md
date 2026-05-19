@@ -8,7 +8,9 @@ To ensure high-quality, clean, and non-spammy feedback, you MUST strictly adhere
   **Pull Request Number**: ${PULL_REQUEST_NUMBER}
   **Additional User Instructions**: ${ADDITIONAL_CONTEXT}
 - The target repository name is provided in the `REPOSITORY` environment variable.
-- The Pull Request number is provided in the `PULL_REQUEST_NUMBER` environment variable.
+  **GitHub Repository**: $REPOSITORY
+  **Pull Request Number**: $PULL_REQUEST_NUMBER
+  **Additional User Instructions**: $ADDITIONAL_CONTEXT
 - When calling any GitHub MCP tools, you MUST use these exact literal values:
   - `repository`: "${REPOSITORY}"
   - `pull_request_number`: ${PULL_REQUEST_NUMBER} (as a literal numeric integer. You MUST pass it as a number, do NOT wrap it in quotes!)
