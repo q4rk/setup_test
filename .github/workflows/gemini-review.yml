@@ -44,13 +44,15 @@ jobs:
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
           RAW_COMMENT: ${{ github.event.comment.body || '' }}
         run: |
-          # Extract additional context from the comment (if any)
+          # Extract additional context from the comment (if any) after the command
+          # e.g. '@gemini-cli /review focus on security' -> ADDITIONAL_CONTEXT="focus on security"
           ADDITIONAL_CONTEXT="None"
           if [[ "$RAW_COMMENT" == *"@gemini-cli /review"* ]]; then
             ADDITIONAL_CONTEXT=$(echo "$RAW_COMMENT" | sed 's/^@gemini-cli \/review//' | xargs)
             [ -z "$ADDITIONAL_CONTEXT" ] && ADDITIONAL_CONTEXT="None"
           fi
           export REPOSITORY PULL_REQUEST_NUMBER ADDITIONAL_CONTEXT
+          
           {
             echo "settings<<EOF_DELIM"
             cat settings.json
@@ -63,6 +65,8 @@ jobs:
             echo "EOF_DELIM"
             
             echo "prompt<<EOF_DELIM"
+            echo "/pr-code-review"
+            echo ""
             envsubst '${REPOSITORY} ${PULL_REQUEST_NUMBER} ${ADDITIONAL_CONTEXT}' < PROMPT.md
             echo ""
             echo "EOF_DELIM"
