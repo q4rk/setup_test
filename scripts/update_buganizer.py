@@ -54,7 +54,10 @@ def extract_bug_actions(commit_lines):
     return actions
 
 def get_metadata_oauth_token():
-    """Queries the local GCE Metadata Server to fetch the GCP service account access token."""
+    """Queries the local GCE Metadata Server or reads from env."""
+    token = os.getenv("OAUTH_TOKEN")
+    if token:
+        return token
     metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
     req = urllib.request.Request(metadata_url)
     req.add_header("Metadata-Flavor", "Google")
@@ -113,7 +116,9 @@ def modify_buganizer_issue(bug_id, commit_msg, close_bug=False):
     
     try:
         with urllib.request.urlopen(req) as response:
+            resp_body = response.read().decode("utf-8")
             print(f"Successfully modified bug b/{bug_id}. Status: {response.status}")
+            print(f"Response: {resp_body}")
     except urllib.error.HTTPError as e:
         print(f"HTTP Error when calling Buganizer API for b/{bug_id}: {e.code} - {e.read().decode()}")
     except Exception as e:
