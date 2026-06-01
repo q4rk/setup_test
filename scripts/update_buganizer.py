@@ -45,6 +45,19 @@ def extract_bug_ids(commit_lines):
             bug_ids.append(match.group(1))
     return bug_ids
 
+def get_metadata_oauth_token():
+    """Queries the local GCE Metadata Server to fetch the GCP service account access token."""
+    metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+    req = urllib.request.Request(metadata_url)
+    req.add_header("Metadata-Flavor", "Google")
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return data.get("access_token")
+    except Exception as e:
+        print(f"Warning: Failed to fetch OAuth token from GCE Metadata Server: {e}")
+        return None
+
 def post_comment_to_buganizer(bug_id, commit_msg):
     """Appends a standard tracking comment to the Buganizer issue."""
     url = f"{BUGANIZER_API_URL}/{bug_id}/comments?key={BUGANIZER_API_KEY}"
@@ -60,10 +73,21 @@ def post_comment_to_buganizer(bug_id, commit_msg):
         "comment": comment_text
     }
     
+    headers = {
+        "Content-Type": "application/json",
+    }
+    
+    # Fetch the GCE service account OAuth token and inject as Bearer auth header
+    token = get_metadata_oauth_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        print("Warning: Proceeding without Authorization header (may fail in secure environments).")
+
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST"
     )
     
