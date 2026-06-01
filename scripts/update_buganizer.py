@@ -17,8 +17,8 @@ import json
 BUGANIZER_API_KEY = os.getenv("BUGANIZER_API_KEY", "YOUR_PUBLIC_ONEPLATFORM_API_KEY_HERE")
 BUGANIZER_API_URL = "https://issuetracker.corp.googleapis.com/v1/issues"
 
-# 2. Regex Pattern for matching Buganizer IDs (e.g., BUG: b/123456 or FIXED: b/78910)
-BUG_REGEX = re.compile(r"^(?:BUG|Bugs|BUGFIX|FIX|FIXED|FIXING|FIXES):\s*(?:b/)?(\d+)", re.IGNORECASE)
+# 2. Regex Pattern for matching Buganizer IDs and determining action
+TAG_REGEX = re.compile(r"^(BUG|Bugs|BUGFIX|FIX|FIXED|FIXING|FIXES):\s*(?:b/)?(\d+)", re.IGNORECASE)
 
 def get_git_commits():
     """Fetches commit messages from the most recent push/merge."""
@@ -36,14 +36,22 @@ def get_git_commits():
         print(f"Error reading git logs: {e.stderr}")
         return []
 
-def extract_bug_ids(commit_lines):
-    """Extracts Buganizer IDs matching the required line-start syntax."""
-    bug_ids = []
+def extract_bug_actions(commit_lines):
+    """Extracts Buganizer IDs and determines if they should be closed.
+    
+    Returns:
+        List of tuples: (bug_id, should_close)
+    """
+    actions = []
     for line in commit_lines:
-        match = BUG_REGEX.match(line.strip())
+        match = TAG_REGEX.match(line.strip())
         if match:
-            bug_ids.append(match.group(1))
-    return bug_ids
+            tag = match.group(1).upper()
+            bug_id = match.group(2)
+            # If tag is FIX, FIXED, FIXING, or FIXES, we close it.
+            should_close = tag in ["FIX", "FIXED", "FIXING", "FIXES"]
+            actions.append((bug_id, should_close))
+    return actions
 
 def get_metadata_oauth_token():
     """Queries the local GCE Metadata Server to fetch the GCP service account access token."""
@@ -58,9 +66,9 @@ def get_metadata_oauth_token():
         print(f"Warning: Failed to fetch OAuth token from GCE Metadata Server: {e}")
         return None
 
-def post_comment_to_buganizer(bug_id, commit_msg):
-    """Appends a standard tracking comment to the Buganizer issue."""
-    url = f"{BUGANIZER_API_URL}/{bug_id}/comments?key={BUGANIZER_API_KEY}"
+def modify_buganizer_issue(bug_id, commit_msg, close_bug=False):
+    """Appends a comment and optionally closes (fixes) the Buganizer issue."""
+    url = f"{BUGANIZER_API_URL}/{bug_id}:modify?key={BUGANIZER_API_KEY}"
     
     # Generate the comment payload
     comment_text = (
@@ -69,9 +77,21 @@ def post_comment_to_buganizer(bug_id, commit_msg):
         f"-------------------\n"
         f"{commit_msg}\n"
     )
+    
     payload = {
-        "comment": comment_text
+        "issueComment": {
+            "comment": comment_text
+        }
     }
+    
+    if close_bug:
+        payload["addMask"] = "status"
+        payload["add"] = {
+            "status": "FIXED"
+        }
+        print(f"Targeting bug b/{bug_id} for COMMENT and CLOSE (FIXED)")
+    else:
+        print(f"Targeting bug b/{bug_id} for COMMENT only")
     
     headers = {
         "Content-Type": "application/json",
@@ -92,9 +112,8 @@ def post_comment_to_buganizer(bug_id, commit_msg):
     )
     
     try:
-        # OAuth/Gaia authentication is handled automatically by the Kokoro environment.
         with urllib.request.urlopen(req) as response:
-            print(f"Successfully posted comment to bug b/{bug_id}. Status: {response.status}")
+            print(f"Successfully modified bug b/{bug_id}. Status: {response.status}")
     except urllib.error.HTTPError as e:
         print(f"HTTP Error when calling Buganizer API for b/{bug_id}: {e.code} - {e.read().decode()}")
     except Exception as e:
@@ -108,15 +127,15 @@ def main():
         return
         
     commit_msg = "\n".join(commit_lines)
-    bug_ids = extract_bug_ids(commit_lines)
+    bug_actions = extract_bug_actions(commit_lines)
     
-    if not bug_ids:
+    if not bug_actions:
         print("No Buganizer BUG or FIX tags found in commit message. Done.")
         return
         
-    print(f"Found Buganizer IDs to update: {bug_ids}")
-    for bug_id in bug_ids:
-        post_comment_to_buganizer(bug_id, commit_msg)
+    print(f"Found Buganizer actions to perform: {bug_actions}")
+    for bug_id, should_close in bug_actions:
+        modify_buganizer_issue(bug_id, commit_msg, close_bug=should_close)
 
 if __name__ == "__main__":
     main()
